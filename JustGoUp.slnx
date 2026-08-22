@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="justgoup.client/justgoup.client.esproj">
+    <Build />
+    <Deploy />
+  </Project>
+  <Project Path="JustGoUp.Server/JustGoUp.Server.csproj" />
+</Solution>

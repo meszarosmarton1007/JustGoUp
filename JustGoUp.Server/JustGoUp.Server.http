@@ -1,0 +1,6 @@
+@JustGoUp.Server_HostAddress = http://localhost:5012
+
+GET {{JustGoUp.Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
