@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".gitignore" />
+  </Folder>
   <Project Path="justgoup.client/justgoup.client.esproj">
     <Build />
     <Deploy />

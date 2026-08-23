@@ -7,6 +7,13 @@ namespace JustGoUp.Server.Data
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
+        public AppDbContext() { }
+
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+           
+        }
+
         // Database sets for each entity
         public DbSet<User> Users { get; set; }
         public DbSet<ClimbingGym> ClimbingGyms { get; set; }
