@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core'; 
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
+import { Observable, tap, BehaviorSubject } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -8,6 +8,9 @@ import { Observable, tap } from 'rxjs';
 export class AuthService {
 
   private apiUrl = '/api/account';
+
+  private currentUserSubject: BehaviorSubject<string | null> = new BehaviorSubject<string | null>(localStorage.getItem('justgoup_username'));
+  public currentUser$ = this.currentUserSubject.asObservable();
 
   constructor(private http: HttpClient) { }
 
@@ -26,8 +29,10 @@ export class AuthService {
   private handleAuthSuccess(response: any) {
     if (response && response.token) {
       localStorage.setItem('justgoup_token', response.token);
-      localStorage.setItem('justgoup_username', response.username);
+      localStorage.setItem('justgoup_username', response.Username);
       localStorage.setItem('justgoup_role', response.role);
+
+      this.currentUserSubject.next(response.Username);
     }
 
   }
