@@ -1,0 +1,21 @@
+<nav style="background-color: #333; padding: 15px; display: flex; justify-content: space-between; align-items: center; color: white;">
+  <div style="font-weight: bold; font-size: 20px; cursor: pointer;" routerLink="/gyms">🧗 JustGoUp</div>
+
+  <div style="display: flex; gap: 20px; align-items: center;">
+    <!-- BELSŐ OLDALAK LINKJEI (Csak ha be van lépve) -->
+    <a *ngIf="authService.isLoggedIn()" routerLink="/gyms" style="color: white; text-decoration: none;">Mászótermek</a>
+
+    <!-- HA NINCS BEJELENTKEZVE -->
+    <a *ngIf="!authService.isLoggedIn()" routerLink="/login" style="color: white; text-decoration: none;">Bejelentkezés</a>
+    <a *ngIf="!authService.isLoggedIn()" routerLink="/register" style="color: white; text-decoration: none;">Regisztráció</a>
+
+    <!-- HA BE VAN JELENTKEZVE -->
+    <span *ngIf="authService.isLoggedIn()" style="color: #ffc107; font-weight: bold;">
+      👋 Szia, {{ getUserName() }}!
+    </span>
+    <button *ngIf="authService.isLoggedIn()" (click)="onLogout()" style="background-color: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;">
+      Kijelentkezés
+    </button>
+  </div>
+</nav>
+
