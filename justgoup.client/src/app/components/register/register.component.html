@@ -1,0 +1,48 @@
+<div class="register-container" style="max-width: 400px; margin: 50px auto; padding: 20px; border: 1px solid #ccc; border-radius: 8px;">
+  <h2>Regisztráció - JustGoUp</h2>
+
+  <form (ngSubmit)="onSubmit()" #registerForm="ngForm">
+    <div style="margin-bottom: 15px;">
+      <label style="display: block;">Felhasználónév:</label>
+      <input type="text" name="username" [(ngModel)]="userModel.username" required minlength="3" style="width: 100%; padding: 8px;">
+    </div>
+
+    <div style="margin-bottom: 15px;">
+      <label style="display: block;">Teljes név:</label>
+      <input type="text" name="fullName" [(ngModel)]="userModel.fullName" required style="width: 100%; padding: 8px;">
+    </div>
+
+    <div style="margin-bottom: 15px;">
+      <label style="display: block;">Email cím:</label>
+      <input type="email" name="email" [(ngModel)]="userModel.email" required email style="width: 100%; padding: 8px;">
+    </div>
+
+    <div style="margin-bottom: 15px;">
+      <label style="display: block;">Jelszó:</label>
+      <input type="password" name="password" [(ngModel)]="userModel.password" required style="width: 100%; padding: 8px;">
+    </div>
+
+    <div style="margin-bottom: 15px;">
+      <label style="display: block;">Telefonszám (opcionális):</label>
+      <input type="tel" name="phoneNumber" [(ngModel)]="userModel.phoneNumber" style="width: 100%; padding: 8px;">
+    </div>
+
+    <div style="margin-bottom: 15px;">
+      <label style="display: block;">Születési dátum:</label>
+      <input type="date" name="birthDate" [(ngModel)]="userModel.birthDate" required style="width: 100%; padding: 8px;">
+    </div>
+
+    <div style="margin-bottom: 15px;">
+      <input type="checkbox" name="hasAcceptedTerms" [(ngModel)]="userModel.hasAcceptedTerms" required>
+      <label> Elfogadom az ÁSZF-et és a GDPR szabályzatot.</label>
+    </div>
+
+    <button type="submit" [disabled]="!registerForm.form.valid" style="width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+      Regisztráció és Belépés
+    </button>
+
+    <div *ngIf="errorMessage" style="color: red; margin-top: 15px; font-weight: bold;">{{ errorMessage }}</div>
+    <div *ngIf="successMessage" style="color: green; margin-top: 15px; font-weight: bold;">{{ successMessage }}</div>
+  </form>
+</div>
+
