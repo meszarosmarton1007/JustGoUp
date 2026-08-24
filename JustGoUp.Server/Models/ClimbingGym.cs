@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using System.ComponentModel.DataAnnotations;
 
 namespace JustGoUp.Server.Models
 {
@@ -14,11 +15,14 @@ namespace JustGoUp.Server.Models
         [StringLength(1000)]
         public string? Description { get; set; } = string.Empty;
 
-        [Required]
+        [ValidateNever]
         public int CreatedByUserId { get; set; }
-        public virtual User CreatedByUser { get; set; } = null!;
+        [ValidateNever]
+        public virtual User? CreatedByUser { get; set; } = null!;
 
+        [ValidateNever]
         public virtual ICollection<ClimbingWall> Walls { get; set; } = new List<ClimbingWall>();
+        [ValidateNever]
         public virtual ICollection<PartnerProfile> LookingForPartnersHere { get; set; } = new List<PartnerProfile>();
 
     }

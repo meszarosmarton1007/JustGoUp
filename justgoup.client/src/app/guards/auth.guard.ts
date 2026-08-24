@@ -6,24 +6,20 @@ import { AuthService } from '../services/auth.service';
   providedIn: 'root'
 })
 export class AuthGuard implements CanActivate {
+
   constructor(private authService: AuthService, private router: Router) { }
 
   canActivate(route: ActivatedRouteSnapshot): boolean {
     const isLoggedIn = this.authService.isLoggedIn();
     const isAuthPage = route.data['isAuthPage'] === true;
 
-    if (isAuthPage && isLoggedIn) {
-// If the user is logged in and trying to access an auth page, redirect to home
-      this.router.navigate(['/']);
+    // Ha be van jelentkezve ÉS újra a login/register oldalra akar menni -> Visszadobjuk a termekhez
+    if (isLoggedIn && isAuthPage) {
+      this.router.navigate(['/gyms']);
       return false;
     }
 
-    if (!isAuthPage && !isLoggedIn) {
-// If the user is not logged in and trying to access a protected page, redirect to login
-      this.router.navigate(['/login']);
-      return false;
-    }
-
+    // MEGJEGYZÉS: A /gyms oldalt mostantól szabadon engedjük mindenkinek, az ellenőrzést a gombok szintjén végezzük a HTML-ben!
     return true;
   }
 }

@@ -1,1 +1,75 @@
-<p>gym-list works!</p>
+<div class="gyms-page-container" style="max-width: 1100px; margin: 30px auto; padding: 20px; display: flex; gap: 40px;">
+
+  <!-- BAL OLDAL: TERMEK LISTÁJA (BÁRKI LÁTHATJA) -->
+  <div class="gyms-list-section" style="flex: 2;">
+    <h2>🧗 Elérhető Mászótermek</h2>
+    <div *ngIf="gyms.length === 0" style="padding: 20px; background: #f8f9fa; border-radius: 4px; border: 1px solid #dee2e6;">
+      <p style="margin: 0; color: #6c757d;">Nincsenek elérhető termek az adatbázisban.</p>
+    </div>
+
+    <div class="gym-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; margin-top: 20px;">
+      <div class="gym-card" *ngFor="let gym of gyms" style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); background: white; display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <h3 style="margin-top: 0; color: #007bff; font-size: 20px;">{{ gym.name }}</h3>
+          <p><strong>📍 Cím:</strong> {{ gym.address }}</p>
+          <p *ngIf="gym.description" style="color: #555; font-size: 14px;">{{ gym.description }}</p>
+        </div>
+
+        <div style="margin-top: 15px;">
+          <!-- Falak hozzáadása gomb (későbbi funkciónak előkészítve) -->
+          <button style="width: 100%; padding: 8px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin-bottom: 5px;">
+            Megnyitás / Falak (+ Add Wall)
+          </button>
+
+          <!-- MODERÁCIÓS GOMBOK: Csak akkor jelennek meg, ha a bejelentkezett felhasználó azonos a terem létrehozójával! -->
+          <div *ngIf="gym.createdByUserId === currentUserId" style="display: flex; gap: 10px; margin-top: 5px;">
+            <button (click)="onEdit(gym)" style="flex: 1; padding: 6px; background-color: #ffc107; color: black; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Szerkeszt</button>
+            <button (click)="onDelete(gym.id)" style="flex: 1; padding: 6px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Töröl</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JOBB OLDAL: ÚRLAP (CSAK BEJELENTKEZETT FELHASZNÁLÓKNAK) -->
+  <div class="gyms-form-section" style="flex: 1; background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #eee; height: fit-content;">
+
+    <div *ngIf="!authService.isLoggedIn()" style="text-align: center; color: #6c757d; padding: 20px;">
+      <h4>Új terem felvételéhez jelentkezz be!</h4>
+      <button routerLink="/login" style="padding: 8px 15px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">Ugrás a Bejelentkezésre</button>
+    </div>
+
+    <div *ngIf="authService.isLoggedIn()">
+      <h3 style="margin-top: 0; color: #333;">{{ isEditMode ? 'Terem szerkesztése' : 'Új terem felvétele' }}</h3>
+
+      <form (ngSubmit)="onSubmit()" #gymForm="ngForm">
+        <div style="margin-bottom: 11px;">
+          <label style="display: block; margin-bottom: 5px; font-weight: bold;">Terem neve:</label>
+          <input type="text" name="name" [(ngModel)]="gymModel.name" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+        </div>
+
+        <div style="margin-bottom: 11px;">
+          <label style="display: block; margin-bottom: 5px; font-weight: bold;">Címe:</label>
+          <input type="text" name="address" [(ngModel)]="gymModel.address" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+        </div>
+
+        <div style="margin-bottom: 11px;">
+          <label style="display: block; margin-bottom: 5px; font-weight: bold;">Leírás:</label>
+          <textarea name="description" [(ngModel)]="gymModel.description" rows="3" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; resize: vertical;"></textarea>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <button type="submit" [disabled]="!gymForm.form.valid" style="flex: 2; padding: 10px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+            {{ isEditMode ? 'Módosítások mentése' : 'Terem mentése' }}
+          </button>
+          <button *ngIf="isEditMode" type="button" (click)="resetForm()" style="flex: 1; padding: 10px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Mégse</button>
+        </div>
+
+        <div *ngIf="errorMessage" style="color: red; margin-top: 10px; font-weight: bold; font-size: 13px;">{{ errorMessage }}</div>
+        <div *ngIf="successMessage" style="color: green; margin-top: 10px; font-weight: bold; font-size: 13px;">{{ successMessage }}</div>
+      </form>
+    </div>
+  </div>
+
+</div>
+
