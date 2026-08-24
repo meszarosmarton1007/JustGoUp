@@ -29,7 +29,7 @@ export class RegisterComponent {
     this.authService.register(this.userModel).subscribe({
       next: (response) => {
         this.successMessage = 'Sikeres regisztráció és beléptetés!';
-        console.log('Token elmentve:', response);
+        console.log('Token elmentve:', response.username);
       },
       error: (err) => {
         this.errorMessage = err.error || 'Hiba történt a regisztráció során.';
