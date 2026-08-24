@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using JustGoUp.Server.Data;
 
 namespace JustGoUp.Server
 {
@@ -7,18 +9,26 @@ namespace JustGoUp.Server
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
+            
+            var connectionString = builder.Configuration.GetConnectionString("AppDbContext")
+                ?? throw new InvalidOperationException("Connection string 'AppDbContext' not found in appsettings.");
 
+            builder.Services.AddDbContext<AppDbContext>(options =>
+                options.UseNpgsql(connectionString));
+
+           
             builder.Services.AddControllers();
-            // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+
+            
             builder.Services.AddOpenApi();
 
             var app = builder.Build();
 
+            
             app.UseDefaultFiles();
             app.MapStaticAssets();
 
-            // Configure the HTTP request pipeline.
+            
             if (app.Environment.IsDevelopment())
             {
                 app.MapOpenApi();
@@ -26,11 +36,13 @@ namespace JustGoUp.Server
 
             app.UseHttpsRedirection();
 
+            
+            app.UseAuthentication();
             app.UseAuthorization();
-
 
             app.MapControllers();
 
+            
             app.MapFallbackToFile("/index.html");
 
             app.Run();
