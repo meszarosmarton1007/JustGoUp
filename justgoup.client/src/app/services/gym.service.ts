@@ -24,6 +24,12 @@ export class GymService {
     return this.http.get<any[]>(this.apiUrl);
   }
 
+  // Ellenőrizd, hogy pontosan így szerepel-e a fájlban:
+  getGymById(id: number): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/${id}`);
+  }
+
+
   createGym(gymData: any): Observable<any> {
     return this.http.post<any>(this.apiUrl, gymData, this.getAuthHeaders());
   }

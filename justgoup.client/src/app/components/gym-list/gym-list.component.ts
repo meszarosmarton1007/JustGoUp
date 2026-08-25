@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { GymService } from '../../services/gym.service';
 import { AuthService } from "../../services/auth.service";
+import { Route, Router } from "@angular/router";
 import { jwtDecode } from "jwt-decode";
 
 @Component({
@@ -20,12 +21,17 @@ export class GymListComponent implements OnInit {
   public isEditMode: boolean = false;
 
 
-  constructor(public gymService: GymService, public authService: AuthService) { }
+  constructor(public gymService: GymService, public authService: AuthService, public router: Router) { }
 
   ngOnInit(): void {
     this.loadGyms();
     this.extrctUserId();
   }
+
+  public onOpenGym(gymId: number): void {
+    this.router.navigate(['/gyms-walls', gymId]);
+  }
+
 
   private extrctUserId() {
     const token = localStorage.getItem('justgoup_token');

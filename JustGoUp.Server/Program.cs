@@ -3,6 +3,7 @@ using JustGoUp.Server.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using JustGoUp.Server.Services;
 
 namespace JustGoUp.Server
 {
@@ -41,8 +42,14 @@ namespace JustGoUp.Server
                 };
             });
 
+            builder.Services.AddScoped<IPhotoService, PhotoService>();
+
             // Alapértelmezett szolgáltatások (API Kontrollerek)
-            builder.Services.AddControllers();
+            builder.Services.AddControllers()
+                .AddJsonOptions(options =>
+                {
+                    options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+                });
 
             // .NET 10 beépített OpenAPI dokumentáció generálója (Swagger utódja)
             builder.Services.AddOpenApi();

@@ -48,7 +48,14 @@ namespace JustGoUp.Server.Controllers
         public async Task<ActionResult<ClimbingGym>> PostClimbingGym(ClimbingGym gym)
         {
             // Kiolvassuk a bejelentkezett mászó ID-ját a JWT tokenből
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                              ?? User.FindFirst("nameid")?.Value
+                              ?? User.FindFirst("id")?.Value;
+
+            if (string.IsNullOrEmpty(userIdClaim))
+            {
+                return Unauthorized("A felhasználó azonosítása sikertelen. Kérjük, jelentkezz be újra!");
+            }
             if (string.IsNullOrEmpty(userIdClaim)) return Unauthorized();
 
             gym.CreatedByUserId = int.Parse(userIdClaim);

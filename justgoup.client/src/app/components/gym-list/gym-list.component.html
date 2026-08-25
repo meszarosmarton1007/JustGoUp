@@ -17,9 +17,25 @@
 
         <div style="margin-top: 15px;">
           <!-- Falak hozzáadása gomb (későbbi funkciónak előkészítve) -->
-          <button style="width: 100%; padding: 8px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin-bottom: 5px;">
-            Megnyitás / Falak (+ Add Wall)
-          </button>
+          <h3 style="margin-top: 0; font-size: 20px;">
+            <a [routerLink]="['/gym-walls', gym.id]" style="display: block;
+          text-align: center;
+          text-decoration: none;
+          width: 100%;
+          padding: 12px;
+          background-color: #007bff;
+          color: white;
+          border-radius: 6px;
+          cursor: pointer;
+          font-weight: bold;
+          margin-top: 15px;
+          box-sizing: border-box;
+          box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+          transition: background-color 0.2s ease-in-out;">
+              Megnyitás / Falak megtekintése
+            </a>
+          </h3>
+
 
           <!-- MODERÁCIÓS GOMBOK: Csak akkor jelennek meg, ha a bejelentkezett felhasználó azonos a terem létrehozójával! -->
           <div *ngIf="gym.createdByUserId === currentUserId" style="display: flex; gap: 10px; margin-top: 5px;">

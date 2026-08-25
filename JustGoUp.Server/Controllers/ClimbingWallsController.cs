@@ -2,98 +2,118 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using JustGoUp.Server.Models;
 using JustGoUp.Server.Data;
+using JustGoUp.Server.Services;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
+using System.Runtime.InteropServices;
 
-[Route("api/[controller]")]
-[ApiController]
-public class ClimbingWallsController : ControllerBase
+namespace JustGoUp.Server.Controllers
 {
-    private readonly AppDbContext _context;
-    public ClimbingWallsController(AppDbContext context)
+    [Route("api/[controller]")]
+    [ApiController]
+    public class ClimbingWallsController : ControllerBase
     {
-        _context = context;
-    }
+        private readonly AppDbContext _context;
+        private readonly IPhotoService _photoService;
 
-    // GET: api/ClimbingWall
-    [HttpGet]
-    public async Task<ActionResult<IEnumerable<ClimbingWall>>> GetClimbingWall()
-    {
-        return await _context.ClimbingWalls.ToListAsync();
-    }
-
-    // GET: api/ClimbingWall/5
-    [HttpGet("{id}")]
-    public async Task<ActionResult<ClimbingWall>> GetClimbingWall(int id)
-    {
-        var climbingwall = await _context.ClimbingWalls.FindAsync(id);
-
-        if (climbingwall == null)
+        public ClimbingWallsController(AppDbContext context, IPhotoService photoService)
         {
-            return NotFound();
+            _context = context;
+            _photoService = photoService;
         }
 
-        return climbingwall;
-    }
-
-    // PUT: api/ClimbingWall/5
-    // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-    [HttpPut("{id}")]
-    public async Task<IActionResult> PutClimbingWall(int? id, ClimbingWall climbingwall)
-    {
-        if (id != climbingwall.Id)
+        // GET: api/ClimbingWalls/gym/{gymId} Only returns climbing walls for a specific gym
+        // JAVÍTÁS: Egyértelművé tesszük a .NET számára az ID paramétert
+        [AllowAnonymous]
+        [HttpGet("gym/{gymId:int}")]
+        public async Task<ActionResult<IEnumerable<ClimbingWall>>> GetWallsByGym(int gymId)
         {
-            return BadRequest();
+            return await _context.ClimbingWalls
+                .Where(w => w.ClimbingGymId == gymId)
+                .ToListAsync();
         }
 
-        _context.Entry(climbingwall).State = EntityState.Modified;
 
-        try
+        [Authorize]
+        [HttpPost]
+        public async Task<ActionResult<ClimbingWall>> PostClimbingWall([FromForm] WallUploadDto dto)
         {
-            await _context.SaveChangesAsync();
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            if (!ClimbingWallExists(id))
+            var gym = await _context.ClimbingGyms.FindAsync(dto.ClimbingGymId);
+            if (gym == null) return NotFound();
+
+            // 1. Felhasználó ID kinyerése a tokenből
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                              ?? User.FindFirst("nameid")?.Value
+                              ?? User.FindFirst("id")?.Value;
+
+            int finalUserId = 0;
+
+            if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out int parsedId))
             {
-                return NotFound();
+                finalUserId = parsedId;
             }
             else
             {
-                throw;
+                // BIZTONSÁGI KORREKCIÓ: Ha a token olvasása helyileg elcsúszik, a terem létrehozójának ID-ját használjuk, hogy ne bukjon el a Foreign Key
+                finalUserId = gym.CreatedByUserId;
             }
+
+            if (dto.File == null || dto.File.Length == 0) return BadRequest("A falról készült fénykép feltöltése kötelező!");
+
+            var result = await _photoService.AddPhotoAsync(dto.File);
+            if (result.Error != null) return BadRequest($"Felhő tárhely hiba: {result.Error.Message}");
+
+            var newWall = new ClimbingWall
+            {
+                Name = dto.Name,
+                WallType = dto.WallType, // <-- JAVÍTÁS: Megadjuk a kötelező típust
+                ClimbingGymId = dto.ClimbingGymId,
+                ImageUrl = result.SecureUrl.AbsoluteUri,
+                ImagePublicId = result.PublicId,
+                CreatedByUserId = finalUserId, // <-- JAVÍTÁS: Itt adjuk át a kötelező User ID-t a PostgreSQL-nek!
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.ClimbingWalls.Add(newWall);
+            await _context.SaveChangesAsync();
+
+            return Ok(newWall);
         }
 
-        return NoContent();
-    }
 
-    // POST: api/ClimbingWall
-    // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-    [HttpPost]
-    public async Task<ActionResult<ClimbingWall>> PostClimbingWall(ClimbingWall climbingwall)
-    {
-        _context.ClimbingWalls.Add(climbingwall);
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction("GetClimbingWall", new { id = climbingwall.Id }, climbingwall);
-    }
-
-    // DELETE: api/ClimbingWall/5
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteClimbingWall(int? id)
-    {
-        var climbingwall = await _context.ClimbingWalls.FindAsync(id);
-        if (climbingwall == null)
+        [Authorize]
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteClimbingWall(int id)
         {
-            return NotFound();
+            var wall = await _context.ClimbingWalls.FindAsync(id);
+            if (wall == null) return NotFound("A fal nem található!");
+
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (wall.ClimbingGym.CreatedByUserId.ToString() != userIdClaim)
+            {
+                return Forbid("Csak a terem tulajdonosa törölheti a falat/szektort!");
+            }
+
+            if (!string.IsNullOrEmpty(wall.ImagePublicId))
+            {
+                await _photoService.DeletePhotoAsync(wall.ImagePublicId);
+            }
+
+            _context.ClimbingWalls.Remove(wall);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+
+
         }
 
-        _context.ClimbingWalls.Remove(climbingwall);
-        await _context.SaveChangesAsync();
-
-        return NoContent();
     }
-
-    private bool ClimbingWallExists(int? id)
+    public class WallUploadDto
     {
-        return _context.ClimbingWalls.Any(e => e.Id == id);
+        public string Name { get; set; } = string.Empty;
+        public int ClimbingGymId { get; set; }
+        public string WallType { get; set; } = string.Empty;
+        public IFormFile? File { get; set; } // Optional: The uploaded photo file from Angular
     }
+
 }
