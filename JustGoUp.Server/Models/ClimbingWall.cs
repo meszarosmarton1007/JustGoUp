@@ -13,7 +13,10 @@ namespace JustGoUp.Server.Models
         public string WallType { get; set; } = string.Empty;
 
         [Required]
-        public string imageUrl { get; set; } = string.Empty;
+        public string ImageUrl { get; set; } = string.Empty;
+
+        [Required]
+        public string ImagePublicId { get; set; } = string.Empty;
 
         [Required]
         public int CreatedByUserId { get; set; }

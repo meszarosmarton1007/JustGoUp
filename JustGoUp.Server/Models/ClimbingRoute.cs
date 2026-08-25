@@ -17,6 +17,9 @@ namespace JustGoUp.Server.Models
         public string ImageUrl { get; set; } = string.Empty;
 
         [Required]
+        public string ImagePublicId { get; set; } = string.Empty;
+
+        [Required]
         [Column(TypeName = "jsonb")] //PostgreSQL specific, for drawings
         public string CanvasDataJson { get; set; } = "{}";
 
