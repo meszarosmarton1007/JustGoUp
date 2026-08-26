@@ -82,30 +82,33 @@ namespace JustGoUp.Server.Controllers
 
 
         [Authorize]
-        [HttpDelete("{id}")]
+        [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteClimbingWall(int id)
         {
-            var wall = await _context.ClimbingWalls.FindAsync(id);
-            if (wall == null) return NotFound("A fal nem található!");
+            var wall = await _context.ClimbingWalls.Include(w => w.ClimbingGym).FirstOrDefaultAsync(w => w.Id == id);
+            if (wall == null) return NotFound();
 
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (wall.ClimbingGym.CreatedByUserId.ToString() != userIdClaim)
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? User.FindFirst("nameid")?.Value
+                ??User.FindFirst("id")?.Value;
+
+            if (wall.ClimbingGym == null || wall.ClimbingGym.CreatedByUserId.ToString() != userIdClaim)
             {
-                return Forbid("Csak a terem tulajdonosa törölheti a falat/szektort!");
+                return Forbid("Nincs jogosultságod a szektor törléséhez!");
             }
 
             if (!string.IsNullOrEmpty(wall.ImagePublicId))
             {
                 await _photoService.DeletePhotoAsync(wall.ImagePublicId);
             }
-
+            
             _context.ClimbingWalls.Remove(wall);
             await _context.SaveChangesAsync();
 
             return NoContent();
-
-
         }
+
+
 
     }
     public class WallUploadDto
