@@ -28,6 +28,10 @@ export class WallService {
     return this.http.post<any>(this.apiUrl, wallFormData, this.getAuthHeaders());
   }
 
+  updateWall(id: number, wallFormData: FormData): Observable<any> {
+    return this.http.put<any>(`${this.apiUrl}/${id}`, wallFormData, this.getAuthHeaders());
+  }
+
   deleteWall(id: number): Observable<any> {
     return this.http.delete<any>(`${this.apiUrl}/${id}`, this.getAuthHeaders());
   }

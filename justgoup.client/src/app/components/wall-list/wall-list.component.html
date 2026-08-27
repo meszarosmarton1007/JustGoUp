@@ -1,6 +1,6 @@
 <div class="walls-page" style="max-width: 1100px; margin: 30px auto; padding: 20px; display: flex; gap: 40px;">
 
-  <!-- BAL OLDAL: SZZEKTOROK LISTÁJA -->
+  <!-- BAL OLDAL: SZEKTOROK LISTÁJA -->
   <div class="walls-list-section" style="flex: 2;">
     <button routerLink="/gyms" style="padding: 6px 12px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 15px;">⬅ Vissza a termekhez</button>
     <h2>Szektorok - {{ gymName }}</h2>
@@ -20,28 +20,30 @@
             {{ wall.wallType }}
           </span>
 
-          <div style="margin-top: 15px; display: flex; gap: 10px;">
-            <button style="flex: 2; padding: 8px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">🎯 Utak megnyitása</button>
+          <div style="margin-top: 15px; display: flex; flex-direction: column; gap: 5px;">
+            <button style="width: 100%; padding: 8px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">🎯 Utak megnyitása</button>
 
-            <!-- FRONTEND JOGOSULTSÁG: Törlés gomb csak akkor látszik, ha én vagyok a Terem tulajdonosa! -->
-            <button *ngIf="gymOwnerId === currentUserId" (click)="onDeleteWall(wall.id)" style="flex: 1; padding: 8px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Töröl</button>
+            <!-- MODERÁCIÓS GOMBOK: Csak a terem tulajdonosának -->
+            <div *ngIf="gymOwnerId === currentUserId" style="display: flex; gap: 5px; width: 100%;">
+              <button (click)="onEditWall(wall)" style="flex: 1; padding: 6px; background: #ffc107; color: black; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px;">Szerkeszt</button>
+              <button (click)="onDeleteWall(wall.id)" style="flex: 1; padding: 6px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px;">Töröl</button>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- JOBB OLDAL: KÉPFELTÖLTŐ ŰRLAP (FRONTEND JOGOSULTSÁG SZŰRÉS) -->
+  <!-- JOBB OLDAL: INTERAKTÍV ŰRLAP -->
   <div class="walls-form-section" style="flex: 1; background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #eee; height: fit-content;">
 
-    <!-- Ha NEM a bejelentkezett felhasználó a tulajdonos -->
     <div *ngIf="gymOwnerId !== currentUserId" style="text-align: center; color: #6c757d; padding: 10px;">
-      <p style="margin: 0; font-weight: bold;">🔒 Új mászófalat kizárólag a terem tulajdonosa tölthet fel.</p>
+      <p style="margin: 0; font-weight: bold;">🔒 A szektorok módosítását kizárólag a terem tulajdonosa végezheti.</p>
     </div>
 
-    <!-- Űrlap megnyitása: CSAK ha én vagyok a terem tulajdonosa -->
     <div *ngIf="gymOwnerId === currentUserId">
-      <h3 style="margin-top: 0; color: #333;">Új szektor feltöltése</h3>
+      <!-- Dinamikus fejléc szöveg -->
+      <h3 style="margin-top: 0; color: #333;">{{ isEditMode ? 'Szektor szerkesztése' : 'Új szektor feltöltése' }}</h3>
 
       <form (ngSubmit)="onSubmit()" #wallForm="ngForm">
         <div style="margin-bottom: 15px;">
@@ -60,13 +62,23 @@
         </div>
 
         <div style="margin-bottom: 20px;">
-          <label style="display: block; margin-bottom: 5px; font-weight: bold;">Fénykép a falról:</label>
-          <input type="file" (change)="onFileSelected($event)" accept="image/*" required style="width: 100%;">
+          <label style="display: block; margin-bottom: 5px; font-weight: bold;">
+            Fénykép {{ isEditMode ? '(Opcionális lecserélni)' : '(Kötelező)' }}:
+          </label>
+          <input id="fileInput" type="file" (change)="onFileSelected($event)" accept="image/*" style="width: 100%;">
         </div>
 
-        <button type="submit" [disabled]="isUploading || !wallForm.form.valid || !selectedFile" style="width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 15px;">
-          {{ isUploading ? 'Feltöltés a felhőbe...' : 'Szektor mentése' }}
-        </button>
+        <div style="display: flex; gap: 10px;">
+          <!-- Dinamikus mentés gomb -->
+          <button type="submit" [disabled]="isUploading || !wallName || (!isEditMode && !selectedFile)" style="flex: 2; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 15px;">
+            {{ isUploading ? 'Mentés...' : (isEditMode ? 'Módosítások mentése' : 'Szektor mentése') }}
+          </button>
+
+          <!-- Mégse gomb csak szerkesztés módban -->
+          <button *ngIf="isEditMode" type="button" (click)="resetForm()" style="flex: 1; padding: 10px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            Mégse
+          </button>
+        </div>
       </form>
     </div>
 

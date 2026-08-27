@@ -1,11 +1,12 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using JustGoUp.Server.Models;
 using JustGoUp.Server.Data;
+using JustGoUp.Server.Models;
 using JustGoUp.Server.Services;
 using Microsoft.AspNetCore.Authorization;
-using System.Security.Claims;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Runtime.InteropServices;
+using System.Security.Claims;
 
 namespace JustGoUp.Server.Controllers
 {
@@ -82,6 +83,54 @@ namespace JustGoUp.Server.Controllers
 
 
         [Authorize]
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> PutClimbingWall(int id, [FromForm] WallEditDto dto)
+        {
+            // JAVÍTÁS: Pontos aszinkron betöltés FirstOrDefaultAsync segítségével!
+            var wall = await _context.ClimbingWalls
+                .Include(w => w.ClimbingGym)
+                .FirstOrDefaultAsync(w => w.Id == id);
+
+            if (wall == null) return NotFound("A módosítani kívánt fal nem található.");
+
+            // Inteligens felhasználó azonosító kinyerés a tokenből
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                              ?? User.FindFirst("nameid")?.Value
+                              ?? User.FindFirst("id")?.Value;
+
+            // Jogosultság ellenőrzése
+            if (wall.ClimbingGym == null || wall.ClimbingGym.CreatedByUserId.ToString() != userIdClaim)
+            {
+                return Forbid("Nincs jogosultságod a szektor szerkesztéséhez!");
+            }
+
+            // Alapadatok frissítése
+            wall.Name = dto.Name;
+            wall.WallType = dto.WallType;
+
+            // Ha töltöttek fel új képet, lecseréljük a felhőben
+            if (dto.File != null && dto.File.Length > 0)
+            {
+                // 1. Régi kép törlése
+                if (!string.IsNullOrEmpty(wall.ImagePublicId))
+                {
+                    await _photoService.DeletePhotoAsync(wall.ImagePublicId);
+                }
+
+                // 2. Új kép feltöltése
+                var result = await _photoService.AddPhotoAsync(dto.File);
+                if (result.Error != null) return BadRequest($"Felhő hiba: {result.Error.Message}");
+
+                wall.ImageUrl = result.SecureUrl.AbsoluteUri;
+                wall.ImagePublicId = result.PublicId;
+            }
+
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
+
+        [Authorize]
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteClimbingWall(int id)
         {
@@ -117,6 +166,14 @@ namespace JustGoUp.Server.Controllers
         public int ClimbingGymId { get; set; }
         public string WallType { get; set; } = string.Empty;
         public IFormFile? File { get; set; } // Optional: The uploaded photo file from Angular
+    }
+
+
+    public class WallEditDto
+    {
+        public string Name { get; set; } = string.Empty;
+        public string WallType { get; set; } = string.Empty;
+        public IFormFile? File { get; set; }
     }
 
 }
