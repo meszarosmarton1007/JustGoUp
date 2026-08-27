@@ -13,6 +13,9 @@ namespace JustGoUp.Server.Models
         [StringLength(100)]
         public string Grade { get; set; } = string.Empty;
 
+        [StringLength(9000)]
+        public string? Description { get; set; }
+
         [Required]
         public string ImageUrl { get; set; } = string.Empty;
 

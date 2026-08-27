@@ -241,6 +241,10 @@ namespace JustGoUp.Server.Migrations
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Description")
+                        .HasMaxLength(9000)
+                        .HasColumnType("character varying(9000)");
+
                     b.Property<string>("Grade")
                         .IsRequired()
                         .HasMaxLength(100)
