@@ -2,98 +2,100 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using JustGoUp.Server.Models;
 using JustGoUp.Server.Data;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
-[Route("api/[controller]")]
-[ApiController]
-public class RouteCommentsController : ControllerBase
+namespace JustGoUp.Server.Controllers
 {
-    private readonly AppDbContext _context;
-    public RouteCommentsController(AppDbContext context)
+    [Route("api/[controller]")]
+    [ApiController]
+    public class RouteCommentsController : ControllerBase
     {
-        _context = context;
-    }
-
-    // GET: api/RouteComment
-    [HttpGet]
-    public async Task<ActionResult<IEnumerable<RouteComment>>> GetRouteComment()
-    {
-        return await _context.RouteComments.ToListAsync();
-    }
-
-    // GET: api/RouteComment/5
-    [HttpGet("{id}")]
-    public async Task<ActionResult<RouteComment>> GetRouteComment(int id)
-    {
-        var routecomment = await _context.RouteComments.FindAsync(id);
-
-        if (routecomment == null)
+        private readonly AppDbContext _context;
+        public RouteCommentsController(AppDbContext context)
         {
-            return NotFound();
+            _context = context;
         }
 
-        return routecomment;
-    }
-
-    // PUT: api/RouteComment/5
-    // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-    [HttpPut("{id}")]
-    public async Task<IActionResult> PutRouteComment(int? id, RouteComment routecomment)
-    {
-        if (id != routecomment.Id)
+        [AllowAnonymous]
+        [HttpGet("route/{routId:int}")]
+        public async Task<ActionResult<IEnumerable<object>>> GetCommentsByRoute(int routeId)
         {
-            return BadRequest();
+            return await _context.RouteComments
+                .Include(c => c.User)
+                .Where(c => c.ClimbingRouteId == routeId)
+                .OrderBy(c => c.CreatedAt)
+                .Select(c => new
+                {
+                    c.Id,
+                    c.Text,
+                    c.CreatedAt,
+                    c.ParentCommentId,
+                    c.ClimbingRouteId,
+                    c.UserId,
+                    UserName = c.User.Username
+
+                }).ToListAsync();
         }
 
-        _context.Entry(routecomment).State = EntityState.Modified;
-
-        try
+        [Authorize]
+        [HttpPost]
+        public async Task<ActionResult> PostComment(CommentCreateDto dto)
         {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? User.FindFirst("nameid")?.Value
+                ?? User.FindFirst("id")?.Value;
+            if (string.IsNullOrEmpty(userIdClaim)) return Unauthorized();
+
+            var newComment = new RouteComment
+            {
+                Text = dto.CommentText,
+                ClimbingRouteId = dto.ClimbingRouteId,
+                ParentCommentId = dto.ParentCommentId,
+                UserId = int.Parse(userIdClaim),
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.RouteComments.Add(newComment);
             await _context.SaveChangesAsync();
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            if (!RouteCommentExists(id))
+
+            var user = await _context.Users.FindAsync(newComment.UserId);
+            return Ok(new
             {
-                return NotFound();
-            }
-            else
-            {
-                throw;
-            }
+                newComment.Id,
+                newComment.Text,
+                newComment.CreatedAt,
+                newComment.ParentCommentId,
+                newComment.ClimbingRouteId,
+                newComment.UserId,
+                UserName = user?.Username ?? "Felhasználó"
+            });
         }
 
-        return NoContent();
-    }
 
-    // POST: api/RouteComment
-    // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-    [HttpPost]
-    public async Task<ActionResult<RouteComment>> PostRouteComment(RouteComment routecomment)
-    {
-        _context.RouteComments.Add(routecomment);
-        await _context.SaveChangesAsync();
 
-        return CreatedAtAction("GetRouteComment", new { id = routecomment.Id }, routecomment);
-    }
-
-    // DELETE: api/RouteComment/5
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteRouteComment(int? id)
-    {
-        var routecomment = await _context.RouteComments.FindAsync(id);
-        if (routecomment == null)
+        [Authorize]
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> DeleteComment(int id)
         {
-            return NotFound();
+            var comment = await _context.RouteComments.FindAsync(id);
+            if (comment == null) return NotFound();
+
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? User.FindFirst("nameid")?.Value
+                ?? User.FindFirst("id")?.Value;
+            if (comment.UserId.ToString() != userIdClaim) return Forbid("Csak a saját kommentedet törölheted");
+
+            _context.RouteComments.Remove(comment);
+            await _context.SaveChangesAsync();
+            return NoContent();
         }
-
-        _context.RouteComments.Remove(routecomment);
-        await _context.SaveChangesAsync();
-
-        return NoContent();
     }
 
-    private bool RouteCommentExists(int? id)
+    public class CommentCreateDto
     {
-        return _context.RouteComments.Any(e => e.Id == id);
+        public string CommentText { get; set; } = string.Empty;
+        public int ClimbingRouteId { get; set; }
+        public int? ParentCommentId { get; set; }
     }
 }
