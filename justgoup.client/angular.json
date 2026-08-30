@@ -106,5 +106,8 @@
       }
     }
   },
-  "defaultProject": "justgoup.client"
+  "defaultProject": "justgoup.client",
+  "cli": {
+    "analytics": false
+  }
 }

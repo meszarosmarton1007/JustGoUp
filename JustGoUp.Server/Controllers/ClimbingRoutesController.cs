@@ -28,8 +28,19 @@ namespace JustGoUp.Server.Controllers
         public async Task<ActionResult<IEnumerable<object>>> GetRoutesByWall(int wallId)
         {
             return await _context.ClimbingRoutes
+                .Include(r => r.ClimbingWall)
                 .Where(r => r.ClimbingWallId == wallId)
-                .Select(r => new {r.Id, r.Name, r.Grade, r.Description, r.CanvasDataJson, r.ImageUrl,r.UserId, r.ClimbingWallId})
+                .Select(r => new {
+                    r.Id, 
+                    r.Name, 
+                    r.Grade, 
+                    r.Description, 
+                    r.CanvasDataJson, 
+                    r.ImageUrl,
+                    r.UserId, 
+                    r.ClimbingWallId,
+                    GymId = r.ClimbingWall != null ? r.ClimbingWall.ClimbingGymId : 0
+                })
                 .ToListAsync();
         }
 
@@ -80,7 +91,7 @@ namespace JustGoUp.Server.Controllers
             _context.ClimbingRoutes.Add(newRoute);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetRoute), new {id = newRoute.Id}, newRoute);
+            return Ok(newRoute);
         }
 
         [Authorize]

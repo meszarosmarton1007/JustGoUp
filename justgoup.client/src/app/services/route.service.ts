@@ -23,6 +23,10 @@ export class RouteService {
     return this.http.get<any[]>(`${this.apiUrl}/wall/${wallId}`);
   }
 
+  getWallDetails(wallId: number): Observable<any> {
+    return this.http.get<any>(`/api/climbingwalls/${wallId}`, this.getAuthHeaders());
+  }
+
   createRoute(routeFormData: FormData): Observable<any> {
     return this.http.post<any>(this.apiUrl, routeFormData, this.getAuthHeaders());
   }

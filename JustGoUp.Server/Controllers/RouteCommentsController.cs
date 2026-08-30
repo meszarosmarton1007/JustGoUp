@@ -18,7 +18,7 @@ namespace JustGoUp.Server.Controllers
         }
 
         [AllowAnonymous]
-        [HttpGet("route/{routId:int}")]
+        [HttpGet("route/{routeId:int}")]
         public async Task<ActionResult<IEnumerable<object>>> GetCommentsByRoute(int routeId)
         {
             return await _context.RouteComments
@@ -28,7 +28,7 @@ namespace JustGoUp.Server.Controllers
                 .Select(c => new
                 {
                     c.Id,
-                    c.Text,
+                    CommentText = c.Text,
                     c.CreatedAt,
                     c.ParentCommentId,
                     c.ClimbingRouteId,

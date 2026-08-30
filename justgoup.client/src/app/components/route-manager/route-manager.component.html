@@ -1,0 +1,175 @@
+<!-- SZIGORÚ KAPUŐR: Csak akkor jelenik meg a felület, ha a Terem ID és az utak már megérkeztek a PostgreSQL-ből! -->
+<div *ngIf="isDataLoaded" class="route-page-container" style="max-width: 850px; margin: 30px auto; padding: 15px; display: flex; flex-direction: column; gap: 25px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+
+  <!-- JAVÍTOTT FELSŐ DINAMIKUS NAVIGÁCIÓS SÁV -->
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <button [routerLink]="['/gym-walls', gymId]" style="padding: 10px 18px; background: #e4e6eb; color: #050505; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 14px;">⬅ Vissza a szektorokhoz</button>
+    <h2 style="margin: 0; color: #050505; font-size: 24px; font-weight: 800;">JustGoUp Hírfolyam</h2>
+  </div>
+
+  <!-- UNIVERZÁLIS TERVEZŐ ÉS MODERÁTOR DOBOZ (Új út létrehozása és Szerkesztés) -->
+  <div *ngIf="authService.isLoggedIn()" style="background: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); border: 1px solid #ced4da; display: flex; flex-direction: column; gap: 15px;">
+
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e4e6eb; padding-bottom: 12px;">
+      <strong style="font-size: 16px; color: #050505; font-weight: bold;">
+        {{ isRouteEditMode ? '✏ Út és rajz módosítása' : '➕ Új mászóút tervezése a hírfolyamba' }}
+      </strong>
+      <div style="display: flex; gap: 6px;" *ngIf="selectedRoute">
+        <button (click)="onUndo()" style="padding: 6px 12px; background: #65676b; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px;">↩ Undo</button>
+        <button (click)="onRedo()" style="padding: 6px 12px; background: #65676b; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px;">↪ Redo</button>
+        <button (click)="onSaveRouteProgress()" style="padding: 6px 16px; background: #1877f2; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px;">💾 Publikálás</button>
+        <button (click)="resetRouteForm(); selectedRoute = null;" style="padding: 6px 12px; background: #b0b3b8; color: black; border: none; border-radius: 6px; cursor: pointer; font-size: 13px;">Mégse</button>
+      </div>
+    </div>
+
+    <!-- BEVITELI MEZŐK (Ha nincs megnyitva az aktív rajzterület, vagy épp szerkesztünk) -->
+    <div style="display: flex; flex-direction: column; gap: 12px;" *ngIf="!selectedRoute || isRouteEditMode">
+      <input type="text" [(ngModel)]="routeName" placeholder="Mi legyen a boulder / mászóút neve?" style="width: 100%; padding: 12px; background: #f0f2f5; border: none; border-radius: 20px; font-size: 15px; box-sizing: border-box; outline: none; border: 1px solid transparent; transition: 0.2s;">
+
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <span style="font-size: 14px; font-weight: bold; color: #65676b;">Nehézségi fokozat:</span>
+        <select [(ngModel)]="routeGrade" style="padding: 8px 14px; background: #f0f2f5; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; outline: none;">
+          <option value="5A">5A</option>
+          <option value="5B">5B</option>
+          <option value="5C">5C</option>
+          <option value="6A">6A</option>
+          <option value="6B">6B</option>
+          <option value="6C">6C</option>
+          <option value="7A">7A</option>
+          <option value="7B">7B</option>
+        </select>
+      </div>
+
+      <textarea [(ngModel)]="routeDescription" placeholder="Írj leírást vagy bétát az úthoz..." rows="2" style="width: 100%; padding: 12px; background: #f0f2f5; border: none; border-radius: 8px; font-size: 14px; box-sizing: border-box; resize: none; font-family: inherit; outline: none;"></textarea>
+
+      <!-- FÁJL KIVÁLASZTÁSA HELYI ESZKÖZRŐL -->
+      <div *ngIf="!isRouteEditMode" style="padding: 12px; background: #f8f9fa; border-radius: 8px; border: 1px dashed #bcc0c4; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
+        <span style="font-size: 13px; font-weight: bold; color: #65676b;">📷 Mászófal fotójának tallózása:</span>
+        <input type="file" (change)="onLocalFileSelected($event)" accept="image/*" style="font-size: 13px; cursor: pointer;">
+      </div>
+
+      <button *ngIf="!selectedRoute" (click)="onStartDrawingSession()" style="width: 100%; padding: 12px; background: #1877f2; color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 15px; transition: 0.2s;">
+        🎨 Tervezőasztal megnyitása és rajzolás
+      </button>
+    </div>
+
+    <!-- AI ÉS SZABADKÉZI ECSET VEZÉRLŐK (Csak ha aktív a tervezőasztal) -->
+    <div *ngIf="selectedRoute" style="display: flex; flex-direction: column; gap: 15px; align-items: center;">
+      <div style="display: flex; gap: 10px; width: 100%; background: #f0f2f5; padding: 8px; border-radius: 8px; box-sizing: border-box;">
+        <button (click)="brushMode = 'ai-click'" [style.background]="brushMode === 'ai-click' ? '#1877f2' : '#fff'" [style.color]="brushMode === 'ai-click' ? '#fff' : '#333'" style="padding: 8px 16px; border: 1px solid #ddd; font-weight: bold; cursor: pointer; border-radius: 6px; font-size: 13px;">⚡ AI Fogásfelismerés</button>
+        <button (click)="brushMode = 'freehand'" [style.background]="brushMode === 'freehand' ? '#1877f2' : '#fff'" [style.color]="brushMode === 'freehand' ? '#fff' : '#333'" style="padding: 8px 16px; border: 1px solid #ddd; font-weight: bold; cursor: pointer; border-radius: 6px; font-size: 13px;">✏ Szabadkézi ecset</button>
+        <select [(ngModel)]="currentBrushColor" style="padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-weight: bold; cursor: pointer; flex: 1; outline: none; background: #fff;">
+          <option value="#00ff00">🟢 Start zóna (Zöld)</option>
+          <option value="#007bff">🔵 Lépés / Fogás (Kék)</option>
+          <option value="#dc3545">🔴 TOP kijárat (Piros)</option>
+        </select>
+      </div>
+
+      <!-- AZ AKTÍV MUNKA CANVAS INTERAKTÍV KONVÉRE -->
+      <div id="canvas-container" style="border: 2px solid #333; border-radius: 8px; width: 700px; height: 600px; background: #1a1a1a; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"></div>
+    </div>
+  </div>
+
+  <!-- POSZTOK FOLYAMA (EGYMÁS ALATT) -->
+  <div class="routes-feed" *ngIf="!selectedRoute || isRouteEditMode" style="display: flex; flex-direction: column; gap: 22px;">
+    <!-- MEGLÉVŐ POSZTOK KÁRTYÁI EGYMÁS ALATT -->
+    <div class="route-card" *ngFor="let route of routes" style="background: #ffffff; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); border: 1px solid #ced4da; padding: 16px; display: flex; flex-direction: column; gap: 14px;">
+
+      <!-- KÁRTYA FEJLÉCE -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #f0f2f5; padding-bottom: 12px;">
+        <div>
+          <h3 style="margin: 0; color: #050505; font-size: 18px; font-weight: bold; display: flex; align-items: center; gap: 8px;">
+            🧗 {{ route.name }}
+          </h3>
+          <div style="display: flex; gap: 8px; align-items: center; margin-top: 5px;">
+            <span style="padding: 2px 10px; background: #e4e6eb; border-radius: 12px; font-size: 12px; font-weight: bold; color: #050505;">
+              Fokozat: {{ route.grade }}
+            </span>
+          </div>
+        </div>
+
+        <!-- MODERÁCIÓS GOMBOK -->
+        <div *ngIf="route.userId === currentUserId" style="display: flex; gap: 6px;">
+          <button (click)="onEditRouteMode(route, $event)" style="padding: 6px 12px; background: #f2f3f5; color: #1877f2; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; transition: 0.2s;">Szerkeszt</button>
+          <button (click)="onDeleteRoute(route.id, $event)" style="padding: 6px 12px; background: #f2f3f5; color: #dc3545; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; transition: 0.2s;">Töröl</button>
+        </div>
+      </div>
+
+      <!-- ÚT ALKOTÓI LEÍRÁSA -->
+      <div *ngIf="route.description" style="font-size: 15px; color: #050505; line-height: 1.4; padding: 2px 0;">
+        {{ route.description }}
+      </div>
+
+      <!-- MENTETT GRAFIKUS VÁSZON KONTÉNER -->
+      <div style="display: flex; justify-content: center; background: #f0f2f5; padding: 12px; border-radius: 8px; box-sizing: border-box;">
+        <div [id]="'canvas-route-' + route.id" style="border: 1px solid #ced4da; border-radius: 8px; width: 700px; height: 600px; background: #1a1a1a; box-shadow: 0 2px 8px rgba(0,0,0,0.06);"></div>
+      </div>
+
+      <!-- --- FACEBOOK-STÍLUSÚ HOZZÁSZÓLÁS SZEKCIÓ --- -->
+      <div class="fb-comments-section" style="border-top: 1px solid #e4e6eb; padding-top: 14px; margin-top: 5px;">
+        <strong style="color: #65676b; font-size: 13px; display: block; margin-bottom: 12px;">💬 Hozzászólások ({{ rootCommentsByRoute[route.id]?.length || 0 }})</strong>
+
+        <!-- Főkomment beviteli mező -->
+        <div style="display: flex; gap: 8px; margin-bottom: 18px;">
+          <input type="text" [(ngModel)]="newCommentTexts[route.id]" placeholder="Írj egy hozzászólást..." style="flex: 1; padding: 12px 16px; background: #f0f2f5; border: none; border-radius: 22px; font-size: 14px; outline: none; box-sizing: border-box;">
+          <button (click)="onAddCommentForRoute(route.id)" style="padding: 0 20px; background: #1877f2; color: white; border: none; border-radius: 22px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s;">Küldés</button>
+        </div>
+
+        <!-- JAVÍTOTT REKURZÍV HOZZÁSZÓLÁSOK HÍRFOLYAMA (A VÉGTELENSÉGIG ÁGYAZHATÓ) -->
+        <!-- JAVÍTOTT REKURZÍV HOZZÁSZÓLÁSOK HÍRFOLYAMA (BEKÖTÖTT SZÁLKÖVETÉSSEL) -->
+        <div class="fb-comments-feed" style="display: flex; flex-direction: column; gap: 14px; width: 100%;">
+
+          <!-- Végigmegyünk a főkommenteken, és mindegyiknél elindítjuk a láncot -->
+          <div *ngFor="let comment of rootCommentsByRoute[route.id]" style="display: flex; flex-direction: column; gap: 4px; border-bottom: 1px solid #f0f2f5; padding-bottom: 10px; width: 100%; box-sizing: border-box;">
+
+            <!-- FIX: Bevezettük a rootCommentId paramétert, ami fixen a főkomment id-ját viszi le a mélybe! -->
+            <ng-container *ngTemplateOutlet="commentTemplate; context: { comment: comment, routeId: route.id, depth: 0, rootCommentId: comment.id }"></ng-container>
+
+            <!-- POZÍCIONÁLT AL-VÁLASZ BEVITELI MEZŐ (Mindig a főszál legalsó pontján nyílik meg, ha rányomnak egy belső válaszra) -->
+            <div *ngIf="activeReplyCommentIds[route.id] === comment.id" style="padding-left: 25px; margin-top: 10px; display: flex; gap: 8px; box-sizing: border-box; width: 100%;">
+              <input type="text" [(ngModel)]="replyTexts[route.id]" placeholder="Válasz írása a beszélgetésre..." style="flex: 1; padding: 10px 14px; background: #f0f2f5; border: none; border-radius: 18px; font-size: 13px; outline: none;">
+              <button (click)="onAddReplyForRoute(route.id, comment.id)" style="padding: 0 14px; background: #42b72a; color: white; border: none; border-radius: 18px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s;">Küldés</button>
+              <button (click)="activeReplyCommentIds[route.id] = null; actualTargetCommentIds[route.id] = null;" style="background: transparent; border: none; color: #65676b; cursor: pointer; font-size: 13px;">Mégse</button>
+            </div>
+
+          </div>
+
+        </div>
+
+
+      </div>
+  </div>
+</div>
+<!-- JAVÍTOTT REKURZÍV MOTOR: A rootCommentId segítségével a legmélyebb szintekről is tudjuk, melyik főszál alá kell nyitni az inputot! -->
+<ng-template #commentTemplate let-comment="comment" let-routeId="routeId" let-depth="depth" let-rootCommentId="rootCommentId">
+  <div [style.padding-left.px]="depth > 0 ? 25 : 0" style="display: flex; flex-direction: column; gap: 4px; margin-top: 6px; box-sizing: border-box; width: 100%;">
+
+    <!-- SZÖVEGBUBORÉK -->
+    <div style="display: flex; align-items: flex-start; gap: 8px; width: 100%;">
+      <div style="background: #f0f2f5; padding: 10px 14px; border-radius: 18px; max-width: 85%; box-sizing: border-box;">
+        <strong style="font-size: 13px; color: #050505; display: block; margin-bottom: 2px;">
+          {{ depth > 0 ? '↪ ' : '👤 ' }}{{ comment.username }}
+        </strong>
+        <p style="margin: 0; font-size: 14px; color: #050505; line-height: 1.35;">{{ comment.commentText }}</p>
+      </div>
+    </div>
+
+    <!-- INTERAKCIÓS SÁV -->
+    <div style="padding-left: 14px; display: flex; gap: 14px; font-size: 12px; color: #65676b; font-weight: bold; margin-top: 1px; margin-bottom: 2px;">
+      <span style="font-weight: normal; color: #8a8d91;">{{ comment.createdAt | date:'yyyy.MM.dd HH:mm' }}</span>
+
+      <!-- FIX: Az 1. paraméter (mezőnyitás) most már szigorúan a rootCommentId-t kapja meg, a 2. paraméter (célpont) pedig a konkrét comment.id-t! -->
+      <span (click)="onOpenReplyInput(routeId, rootCommentId, comment.id)" style="cursor: pointer; color: #1877f2; transition: 0.2s;">Válasz</span>
+    </div>
+
+    <!-- REKURZÍV ÖN-MEGHÍVÁS: Továbbpasszoljuk a rootCommentId-t a következő generációnak is! -->
+    <div *ngIf="(getRepliesForRoute(routeId, comment.id)?.length ?? 0) > 0" style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+      <ng-container *ngFor="let childComment of getRepliesForRoute(routeId, comment.id)">
+        <ng-container *ngTemplateOutlet="commentTemplate; context: { comment: childComment, routeId: routeId, depth: depth + 1, rootCommentId: rootCommentId }"></ng-container>
+      </ng-container>
+    </div>
+
+  </div>
+</ng-template>
+
+
